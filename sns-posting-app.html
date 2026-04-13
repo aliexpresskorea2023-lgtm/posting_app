@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNS Posting APP</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Google API Client -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    
+    <!-- FullCalendar -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/ko.js"></script>
+    
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- PapaParse (CSV) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <style>
+        /* Custom Styles */
+        :root {
+            --primary: #FF0000;
+            --primary-hover: #CC0000;
+            --sidebar-width: 240px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .sidebar-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: 24px;
+        }
+        
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .nav-item:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+        
+        .nav-item.active {
+            background: #fee2e2;
+            color: var(--primary);
+        }
+        
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+        
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .user-email {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+        }
+        
+        .page-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .page-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        .page-content {
+            padding: 32px;
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            padding: 24px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            padding: 24px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .stat-suffix {
+            font-size: 14px;
+            color: #9ca3af;
+            font-weight: 400;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+        
+        .btn-ghost {
+            background: transparent;
+            color: #6b7280;
+        }
+        
+        .btn-ghost:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+        
+        .form-label .required {
+            color: var(--primary);
+            margin-left: 2px;
+        }
+        
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        /* Platform Toggle */
+        .platform-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .platform-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .platform-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .platform-icon.youtube {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .platform-icon.instagram {
+            background: #fce7f3;
+            color: #db2777;
+        }
+        
+        .platform-icon.threads {
+            background: #f3f4f6;
+            color: #111827;
+        }
+        
+        .platform-icon.tiktok {
+            background: #f3e8ff;
+            color: #9333ea;
+        }
+        
+        .platform-name {
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .platform-status {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #d1d5db;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+        
+        .toggle-slider:before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        
+        .toggle input:checked + .toggle-slider {
+            background: var(--primary);
+        }
+        
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* Content Type Selector */
+        .content-type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .content-type-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .content-type-card:hover {
+            border-color: #d1d5db;
+        }
+        
+        .content-type-card.selected {
+            border-color: var(--primary);
+            background: #fef2f2;
+        }
+        
+        .content-type-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 12px;
+            color: #6b7280;
+        }
+        
+        .content-type-card.selected .content-type-icon {
+            color: var(--primary);
+        }
+        
+        .content-type-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        /* File Upload */
+        .file-upload-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 48px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .file-upload-zone:hover {
+            border-color: var(--primary);
+            background: #fef2f2;
+        }
+        
+        .file-upload-zone.has-file {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        /* Preview Panel */
+        .preview-panel {
+            position: sticky;
+            top: 24px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            padding: 24px;
+        }
+        
+        .preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 16px;
+        }
+        
+        /* Login Page */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 48px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .login-logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        
+        .login-subtitle {
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+        
+        .google-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .google-login-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e5e7eb;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .toast {
+            background: white;
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .toast.success {
+            border-left: 4px solid #22c55e;
+        }
+        
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+        
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .mt-4 {
+            margin-top: 16px;
+        }
+        
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .justify-between {
+            justify-content: space-between;
+        }
+        
+        .gap-4 {
+            gap: 16px;
+        }
+        
+        .w-full {
+            width: 100%;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app"></div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const CONFIG = {
+            // Firebase Configuration
+            FIREBASE: {
+                apiKey: "AIzaSyCXF0W4DMkVBvBtat_OxDO1O8M5rCMIMVE",
+                authDomain: "sns-posting-app.firebaseapp.com",
+                projectId: "sns-posting-app",
+                storageBucket: "sns-posting-app.firebasestorage.app",
+                messagingSenderId: "613245242749",
+                appId: "1:613245242749:web:e38c5ae988246094c29014"
+            },
+            
+            // Google OAuth Configuration
+            GOOGLE: {
+                CLIENT_ID: "613245242749-iprnqdumpqni8rgsgfh77lgceitecom1.apps.googleusercontent.com",
+                API_KEY: "AIzaSyCXF0W4DMkVBvBtat_OxDO1O8M5rCMIMVE",
+                SCOPES: [
+                    'https://www.googleapis.com/auth/youtube.upload',
+                    'https://www.googleapis.com/auth/youtube.readonly',
+                    'https://www.googleapis.com/auth/youtube.force-ssl'
+                ]
+            },
+            
+            // App Settings
+            APP_NAME: 'SNS Posting APP',
+            MAX_FILE_SIZE: 2 * 1024 * 1024 * 1024, // 2GB for YouTube
+            SUPPORTED_VIDEO_TYPES: ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
+            SUPPORTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif']
+        };
+
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        const STATE = {
+            user: null,
+            isAuthenticated: false,
+            currentPage: 'dashboard',
+            platforms: {
+                youtube: { connected: false, data: null },
+                instagram: { connected: false, data: null },
+                threads: { connected: false, data: null },
+                tiktok: { connected: false, data: null }
+            },
+            draft: {
+                type: null,
+                media: null,
+                title: '',
+                description: '',
+                pinnedComment: '',
+                platforms: {},
+                scheduledAt: null
+            },
+            stats: {
+                monthlyPosts: 0,
+                connectedPlatforms: 0,
+                scheduledPosts: 0
+            }
+        };
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        const UTILS = {
+            formatDate: (timestamp) => {
+                if (!timestamp) return '-';
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                return date.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            },
+            
+            formatDateTime: (timestamp) => {
+                if (!timestamp) return '-';
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                return date.toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+            
+            formatNumber: (num) => {
+                if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                return num.toString();
+            },
+            
+            formatFileSize: (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            },
+            
+            generateId: () => {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            },
+            
+            debounce: (func, wait) => {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+        };
+
+        // ============================================
+        // TOAST NOTIFICATIONS
+        // ============================================
+        const Toast = {
+            show: (message, type = 'info') => {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        ${type === 'success' 
+                            ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>'
+                            : type === 'error'
+                            ? '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>'
+                            : '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>'
+                        }
+                    </svg>
+                    <span>${message}</span>
+                `;
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideIn 0.3s ease reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+            
+            success: (message) => Toast.show(message, 'success'),
+            error: (message) => Toast.show(message, 'error'),
+            info: (message) => Toast.show(message, 'info')
+        };
+
+        // ============================================
+        // FIREBASE INITIALIZATION
+        // ============================================
+        let firebaseApp, firebaseAuth, firebaseDb;
+
+        const initFirebase = () => {
+            firebaseApp = firebase.initializeApp(CONFIG.FIREBASE);
+            firebaseAuth = firebase.auth();
+            firebaseDb = firebase.firestore();
+        };
+
+        // ============================================
+        // AUTHENTICATION
+        // ============================================
+        const AUTH = {
+            init: () => {
+                firebaseAuth.onAuthStateChanged((user) => {
+                    if (user) {
+                        STATE.user = user;
+                        STATE.isAuthenticated = true;
+                        APP.loadUserData().then(() => {
+                            APP.render();
+                        });
+                    } else {
+                        STATE.user = null;
+                        STATE.isAuthenticated = false;
+                        APP.renderLogin();
+                    }
+                });
+            },
+            
+            signInWithGoogle: async () => {
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.addScope('https://www.googleapis.com/auth/youtube.upload');
+                    provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
+                    
+                    const result = await firebaseAuth.signInWithPopup(provider);
+                    
+                    // Get Google Access Token for YouTube API
+                    const credential = result.credential;
+                    const accessToken = credential.accessToken;
+                    
+                    // Save token to Firestore
+                    await firebaseDb.collection('users').doc(result.user.uid).collection('tokens').doc('youtube').set({
+                        accessToken: accessToken,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    Toast.success('로그인 성공!');
+                    return result.user;
+                } catch (error) {
+                    console.error('Login error:', error);
+                    Toast.error('로그인 실패: ' + error.message);
+                    throw error;
+                }
+            },
+            
+            signOut: async () => {
+                try {
+                    await firebaseAuth.signOut();
+                    Toast.success('로그아웃되었습니다.');
+                } catch (error) {
+                    Toast.error('로그아웃 실패: ' + error.message);
+                }
+            }
+        };
+
+        // ============================================
+        // DATABASE OPERATIONS
+        // ============================================
+        const DB = {
+            // User Profile
+            getUserProfile: async (userId) => {
+                const doc = await firebaseDb.collection('users').doc(userId).get();
+                return doc.exists ? doc.data() : null;
+            },
+            
+            saveUserProfile: async (userId, data) => {
+                await firebaseDb.collection('users').doc(userId).set({
+                    ...data,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            },
+            
+            // Platforms
+            getPlatforms: async (userId) => {
+                const snapshot = await firebaseDb.collection('users').doc(userId).collection('platforms').get();
+                const platforms = {};
+                snapshot.forEach(doc => {
+                    platforms[doc.id] = doc.data();
+                });
+                return platforms;
+            },
+            
+            savePlatform: async (userId, platformId, data) => {
+                await firebaseDb.collection('users').doc(userId).collection('platforms').doc(platformId).set({
+                    ...data,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            },
+            
+            // Posts
+            createPost: async (userId, data) => {
+                const postRef = firebaseDb.collection('users').doc(userId).collection('posts').doc();
+                await postRef.set({
+                    ...data,
+                    id: postRef.id,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                return postRef.id;
+            },
+            
+            getPosts: async (userId, filters = {}) => {
+                let query = firebaseDb.collection('users').doc(userId).collection('posts').orderBy('createdAt', 'desc');
+                
+                if (filters.status) {
+                    query = query.where('status', '==', filters.status);
+                }
+                
+                const snapshot = await query.limit(50).get();
+                return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            },
+            
+            // Stats
+            getMonthlyStats: async (userId) => {
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                
+                const snapshot = await firebaseDb.collection('users').doc(userId).collection('posts')
+                    .where('createdAt', '>=', startOfMonth)
+                    .where('status', '==', 'published')
+                    .get();
+                
+                return snapshot.size;
+            },
+            
+            // Drafts
+            saveDraft: async (userId, draftData) => {
+                const draftRef = firebaseDb.collection('users').doc(userId).collection('drafts').doc('current');
+                await draftRef.set({
+                    ...draftData,
+                    savedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            },
+            
+            getDraft: async (userId) => {
+                const doc = await firebaseDb.collection('users').doc(userId).collection('drafts').doc('current').get();
+                return doc.exists ? doc.data() : null;
+            },
+            
+            // Pinned Comments
+            getPinnedComments: async (userId) => {
+                const snapshot = await firebaseDb.collection('users').doc(userId).collection('pinnedComments')
+                    .orderBy('lastUsedAt', 'desc')
+                    .limit(20)
+                    .get();
+                return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            },
+            
+            savePinnedComment: async (userId, text) => {
+                const commentRef = firebaseDb.collection('users').doc(userId).collection('pinnedComments').doc();
+                await commentRef.set({
+                    text: text,
+                    usageCount: 1,
+                    lastUsedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                return commentRef.id;
+            },
+            
+            incrementCommentUsage: async (userId, commentId) => {
+                await firebaseDb.collection('users').doc(userId).collection('pinnedComments').doc(commentId).update({
+                    usageCount: firebase.firestore.FieldValue.increment(1),
+                    lastUsedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        };
+
+        // ============================================
+        // YOUTUBE API
+        // ============================================
+        const YOUTUBE_API = {
+            init: () => {
+                return new Promise((resolve, reject) => {
+                    gapi.load('client', async () => {
+                        try {
+                            await gapi.client.init({
+                                apiKey: CONFIG.GOOGLE.API_KEY,
+                                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+                            });
+                            resolve();
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
+                });
+            },
+            
+            uploadVideo: async (file, metadata, onProgress) => {
+                // This will be implemented with resumable upload
+                console.log('Uploading to YouTube:', metadata);
+                return { videoId: 'dummy-id', status: 'uploading' };
+            },
+            
+            setThumbnail: async (videoId, thumbnailFile) => {
+                console.log('Setting thumbnail:', videoId);
+            }
+        };
+
+        // ============================================
+        // UI COMPONENTS
+        // ============================================
+        const UI = {
+            // Icons
+            icons: {
+                dashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
+                publish: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>',
+                csv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+                calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+                history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+                platforms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
+                settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+                users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+                video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>',
+                image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
+                text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"></path></svg>',
+                upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+                download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+                youtube: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
+                instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>',
+                threads: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>',
+                tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>'
+            },
+
+            // Render Sidebar
+            renderSidebar: () => {
+                const user = STATE.user;
+                return `
+                    <aside class="sidebar">
+                        <div class="sidebar-header">
+                            <div class="sidebar-logo">SNS Posting</div>
+                        </div>
+                        
+                        <nav class="sidebar-nav">
+                            <div class="nav-section">
+                                <a href="#dashboard" class="nav-item ${STATE.currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard">
+                                    ${UI.icons.dashboard}
+                                    <span>대시보드</span>
+                                </a>
+                                <a href="#publish" class="nav-item ${STATE.currentPage === 'publish' ? 'active' : ''}" data-page="publish">
+                                    ${UI.icons.publish}
+                                    <span>콘텐츠 발행</span>
+                                </a>
+                                <a href="#csv" class="nav-item ${STATE.currentPage === 'csv' ? 'active' : ''}" data-page="csv">
+                                    ${UI.icons.csv}
+                                    <span>CSV 대량 업로드</span>
+                                </a>
+                                <a href="#calendar" class="nav-item ${STATE.currentPage === 'calendar' ? 'active' : ''}" data-page="calendar">
+                                    ${UI.icons.calendar}
+                                    <span>콘텐츠 캘린더</span>
+                                </a>
+                                <a href="#history" class="nav-item ${STATE.currentPage === 'history' ? 'active' : ''}" data-page="history">
+                                    ${UI.icons.history}
+                                    <span>발행 히스토리</span>
+                                </a>
+                                <a href="#platforms" class="nav-item ${STATE.currentPage === 'platforms' ? 'active' : ''}" data-page="platforms">
+                                    ${UI.icons.platforms}
+                                    <span>SNS 계정 연결</span>
+                                </a>
+                            </div>
+                            
+                            <div class="nav-section">
+                                <div class="nav-section-title">관리자</div>
+                                <a href="#subscription" class="nav-item ${STATE.currentPage === 'subscription' ? 'active' : ''}" data-page="subscription">
+                                    ${UI.icons.settings}
+                                    <span>구독 관리</span>
+                                </a>
+                                <a href="#users" class="nav-item ${STATE.currentPage === 'users' ? 'active' : ''}" data-page="users">
+                                    ${UI.icons.users}
+                                    <span>회원 관리</span>
+                                </a>
+                            </div>
+                        </nav>
+                        
+                        <div class="sidebar-footer">
+                            <div class="user-profile">
+                                <div class="user-avatar">
+                                    <img src="${user?.photoURL || 'https://via.placeholder.com/36'}" alt="${user?.displayName || 'User'}">
+                                </div>
+                                <div class="user-info">
+                                    <div class="user-name">${user?.displayName || '사용자'}</div>
+                                    <div class="user-email">${user?.email || ''}</div>
+                                </div>
+                                <button class="btn btn-ghost" onclick="AUTH.signOut()" style="padding: 8px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                        <polyline points="16 17 21 12 16 7"></polyline>
+                                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+                `;
+            },
+
+            // Render Dashboard
+            renderDashboard: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">안녕하세요, ${STATE.user?.displayName || '사용자'}님</h1>
+                            <p class="page-subtitle">오늘도 좋은 콘텐츠를 만들어볼까요?</p>
+                        </div>
+                        <a href="#publish" class="btn btn-primary">
+                            ${UI.icons.publish}
+                            새 콘텐츠 발행
+                        </a>
+                    </div>
+                    
+                    <div class="page-content">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">이번 달 발행</div>
+                                <div class="stat-value">${STATE.stats.monthlyPosts}<span class="stat-suffix"></span></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">연결된 플랫폼</div>
+                                <div class="stat-value">${STATE.stats.connectedPlatforms}<span class="stat-suffix">/4</span></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">예약 발행</div>
+                                <div class="stat-value">${STATE.stats.scheduledPosts}<span class="stat-suffix"></span></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">역할</div>
+                                <div class="stat-value" style="font-size: 18px; margin-top: 8px;">슈퍼관리자</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom: 24px;">
+                            <h3 class="card-title">연결된 플랫폼</h3>
+                            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                                ${STATE.platforms.youtube.connected ? `
+                                    <div style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f9fafb; border-radius: 8px;">
+                                        <span style="color: #dc2626;">${UI.icons.youtube}</span>
+                                        <span style="font-weight: 500;">${STATE.platforms.youtube.data?.channelTitle || 'YouTube'}</span>
+                                    </div>
+                                ` : ''}
+                                ${STATE.platforms.instagram.connected ? `
+                                    <div style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f9fafb; border-radius: 8px;">
+                                        <span style="color: #db2777;">${UI.icons.instagram}</span>
+                                        <span style="font-weight: 500;">${STATE.platforms.instagram.data?.username || 'Instagram'}</span>
+                                    </div>
+                                ` : ''}
+                                ${!STATE.platforms.youtube.connected && !STATE.platforms.instagram.connected ? `
+                                    <p style="color: #6b7280;">연결된 플랫폼이 없습니다. <a href="#platforms" style="color: var(--primary);">SNS 계정 연결</a>에서 연결해주세요.</p>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 class="card-title" style="margin: 0;">최근 발행</h3>
+                                <a href="#history" style="font-size: 14px; color: var(--primary);">전체보기</a>
+                            </div>
+                            <div id="recentPosts">
+                                <p style="color: #6b7280; text-align: center; padding: 40px;">최근 발행 내역이 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render Publish Page
+            renderPublish: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">새 콘텐츠 발행</h1>
+                            <p class="page-subtitle">원하는 플랫폼에 콘텐츠를 발행하세요.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="page-content">
+                        <div style="display: grid; grid-template-columns: 1fr 360px; gap: 32px;">
+                            <div>
+                                <!-- Content Type -->
+                                <div class="card" style="margin-bottom: 24px;">
+                                    <h3 class="card-title">콘텐츠 유형</h3>
+                                    <div class="content-type-grid">
+                                        <div class="content-type-card ${STATE.draft.type === 'video' ? 'selected' : ''}" onclick="APP.selectContentType('video')">
+                                            <div class="content-type-icon">${UI.icons.video}</div>
+                                            <div class="content-type-label">영상</div>
+                                        </div>
+                                        <div class="content-type-card ${STATE.draft.type === 'image' ? 'selected' : ''}" onclick="APP.selectContentType('image')">
+                                            <div class="content-type-icon">${UI.icons.image}</div>
+                                            <div class="content-type-label">이미지</div>
+                                        </div>
+                                        <div class="content-type-card ${STATE.draft.type === 'text' ? 'selected' : ''}" onclick="APP.selectContentType('text')">
+                                            <div class="content-type-icon">${UI.icons.text}</div>
+                                            <div class="content-type-label">텍스트</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- File Upload -->
+                                    ${STATE.draft.type && STATE.draft.type !== 'text' ? `
+                                        <div style="margin-top: 24px;">
+                                            <div class="form-label">파일 선택</div>
+                                            <div class="file-upload-zone ${STATE.draft.media ? 'has-file' : ''}" onclick="document.getElementById('fileInput').click()">
+                                                <input type="file" id="fileInput" class="hidden" accept="${STATE.draft.type === 'video' ? 'video/*' : 'image/*'}" onchange="APP.handleFileSelect(event)">
+                                                ${STATE.draft.media ? `
+                                                    <div>
+                                                        <p style="font-weight: 600; color: #22c55e;">✓ 파일 선택 완료</p>
+                                                        <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">${STATE.draft.media.name} (${UTILS.formatFileSize(STATE.draft.media.size)})</p>
+                                                    </div>
+                                                ` : `
+                                                    <div>
+                                                        <div style="width: 48px; height: 48px; margin: 0 auto 12px; color: #9ca3af;">${UI.icons.upload}</div>
+                                                        <p style="font-weight: 500; color: #374151;">클릭하여 파일 선택</p>
+                                                        <p style="color: #9ca3af; font-size: 14px; margin-top: 4px;">${STATE.draft.type === 'video' ? 'MP4, MOV, AVI' : 'JPG, PNG, GIF'}</p>
+                                                    </div>
+                                                `}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                
+                                <!-- Content Info -->
+                                <div class="card" style="margin-bottom: 24px;">
+                                    <h3 class="card-title">콘텐츠 정보</h3>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">제목 <span class="required">*</span></label>
+                                        <input type="text" class="form-input" id="contentTitle" placeholder="콘텐츠 제목을 입력하세요" value="${STATE.draft.title}" onchange="STATE.draft.title = this.value">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">설명 <span class="required">*</span></label>
+                                        <textarea class="form-textarea" id="contentDescription" placeholder="콘텐츠 설명을 입력하세요" onchange="STATE.draft.description = this.value">${STATE.draft.description}</textarea>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">고정댓글</label>
+                                        <div style="display: flex; gap: 8px;">
+                                            <input type="text" class="form-input" id="pinnedComment" placeholder="고정할 댓글을 입력하세요 (선택사항)" value="${STATE.draft.pinnedComment}" onchange="STATE.draft.pinnedComment = this.value" style="flex: 1;">
+                                            <button type="button" class="btn btn-secondary" onclick="APP.openPinnedCommentModal()">
+                                                History
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Platform Selection -->
+                                <div class="card" style="margin-bottom: 24px;">
+                                    <h3 class="card-title">발행 플랫폼 선택</h3>
+                                    
+                                    <div class="platform-toggle">
+                                        <div class="platform-info">
+                                            <div class="platform-icon youtube">${UI.icons.youtube}</div>
+                                            <div>
+                                                <div class="platform-name">YouTube</div>
+                                                <div class="platform-status">${STATE.platforms.youtube.connected ? '연결됨' : '미연결'}</div>
+                                            </div>
+                                        </div>
+                                        <label class="toggle">
+                                            <input type="checkbox" ${STATE.platforms.youtube.connected ? '' : 'disabled'} onchange="APP.togglePlatform('youtube', this.checked)" ${STATE.draft.platforms.youtube ? 'checked' : ''}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="platform-toggle">
+                                        <div class="platform-info">
+                                            <div class="platform-icon instagram">${UI.icons.instagram}</div>
+                                            <div>
+                                                <div class="platform-name">Instagram</div>
+                                                <div class="platform-status">${STATE.platforms.instagram.connected ? '연결됨' : '미연결'}</div>
+                                            </div>
+                                        </div>
+                                        <label class="toggle">
+                                            <input type="checkbox" ${STATE.platforms.instagram.connected ? '' : 'disabled'} onchange="APP.togglePlatform('instagram', this.checked)" ${STATE.draft.platforms.instagram ? 'checked' : ''}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="platform-toggle">
+                                        <div class="platform-info">
+                                            <div class="platform-icon threads">${UI.icons.threads}</div>
+                                            <div>
+                                                <div class="platform-name">Threads</div>
+                                                <div class="platform-status">${STATE.platforms.threads.connected ? '연결됨' : '미연결'}</div>
+                                            </div>
+                                        </div>
+                                        <label class="toggle">
+                                            <input type="checkbox" ${STATE.platforms.threads.connected ? '' : 'disabled'} onchange="APP.togglePlatform('threads', this.checked)" ${STATE.draft.platforms.threads ? 'checked' : ''}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="platform-toggle">
+                                        <div class="platform-info">
+                                            <div class="platform-icon tiktok">${UI.icons.tiktok}</div>
+                                            <div>
+                                                <div class="platform-name">TikTok</div>
+                                                <div class="platform-status">${STATE.platforms.tiktok.connected ? '연결됨' : '미연결'}</div>
+                                            </div>
+                                        </div>
+                                        <label class="toggle">
+                                            <input type="checkbox" ${STATE.platforms.tiktok.connected ? '' : 'disabled'} onchange="APP.togglePlatform('tiktok', this.checked)" ${STATE.draft.platforms.tiktok ? 'checked' : ''}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div style="display: flex; gap: 12px;">
+                                    <button type="button" class="btn btn-secondary" onclick="APP.saveDraft()">
+                                        임시 저장
+                                    </button>
+                                    <button type="button" class="btn btn-primary" style="flex: 1;" onclick="APP.publishNow()">
+                                        지금 발행
+                                    </button>
+                                    <button type="button" class="btn btn-primary" style="flex: 1;" onclick="APP.schedulePublish()">
+                                        예약 발행
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Preview Panel -->
+                            <div>
+                                <div class="preview-panel">
+                                    <h4 class="preview-title">미리보기</h4>
+                                    <div id="previewContent">
+                                        <p style="color: #9ca3af; text-align: center; padding: 40px 0;">
+                                            콘텐츠를 입력하면<br>미리보기가 표시됩니다
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render CSV Upload Page
+            renderCsvUpload: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">CSV 대량 업로드</h1>
+                            <p class="page-subtitle">CSV 파일로 여러 콘텐츠를 한 번에 등록하세요.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="page-content">
+                        <div class="card" style="max-width: 800px; margin: 0 auto;">
+                            <h3 class="card-title">파일 업로드</h3>
+                            
+                            <div class="file-upload-zone" onclick="document.getElementById('csvInput').click()">
+                                <input type="file" id="csvInput" class="hidden" accept=".csv,.xlsx,.xls" onchange="APP.handleCsvSelect(event)">
+                                <div style="width: 48px; height: 48px; margin: 0 auto 12px; color: #9ca3af;">${UI.icons.upload}</div>
+                                <p style="font-weight: 500; color: #374151;">클릭하여 CSV 파일 선택</p>
+                                <p style="color: #9ca3af; font-size: 14px; margin-top: 4px;">또는 파일을 여기에 드래그하세요</p>
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 16px;">
+                                <button type="button" class="btn btn-secondary" onclick="APP.downloadCsvTemplate()">
+                                    ${UI.icons.download}
+                                    샘플 CSV 다운로드
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="max-width: 800px; margin: 24px auto 0;">
+                            <h3 class="card-title">CSV 형식 안내</h3>
+                            <div style="background: #f9fafb; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.8;">
+                                <p><strong>필수 항목:</strong> title (제목)</p>
+                                <p><strong>선택 항목:</strong> description, type (VIDEO/IMAGE/TEXT), platform (YOUTUBE/INSTAGRAM/THREADS/TIKTOK), date (YYYY-MM-DD HH:mm), hashtags, media (Drive URL)</p>
+                                <p><strong>날짜 형식:</strong> 2024-04-07 15:00, 2025/04/07 15:00</p>
+                                <p><strong>참고:</strong> CSV 파일은 UTF-8 인코딩 권장</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render Calendar Page
+            renderCalendar: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">콘텐츠 캘린더</h1>
+                            <p class="page-subtitle">발행 일정을 한눈에 확인하세요.</p>
+                        </div>
+                        <a href="#publish" class="btn btn-primary">
+                            ${UI.icons.publish}
+                            새 콘텐츠
+                        </a>
+                    </div>
+                    
+                    <div class="page-content">
+                        <div class="card">
+                            <div style="display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 12px; height: 12px; background: #9ca3af; border-radius: 50%;"></span>
+                                    <span style="font-size: 14px; color: #6b7280;">드래프트</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 12px; height: 12px; background: #3b82f6; border-radius: 50%;"></span>
+                                    <span style="font-size: 14px; color: #6b7280;">예약</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 12px; height: 12px; background: #eab308; border-radius: 50%;"></span>
+                                    <span style="font-size: 14px; color: #6b7280;">발행중</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 12px; height: 12px; background: #22c55e; border-radius: 50%;"></span>
+                                    <span style="font-size: 14px; color: #6b7280;">완료</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 12px; height: 12px; background: #ef4444; border-radius: 50%;"></span>
+                                    <span style="font-size: 14px; color: #6b7280;">실패</span>
+                                </div>
+                            </div>
+                            <div id="calendar" style="min-height: 600px;"></div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render History Page
+            renderHistory: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">발행 히스토리</h1>
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            <button class="btn btn-secondary" onclick="APP.refreshHistory()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                새로고침
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="page-content">
+                        <div class="card">
+                            <!-- Filters -->
+                            <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+                                <input type="date" class="form-input" style="width: auto;" placeholder="시작일">
+                                <span style="color: #9ca3af; align-self: center;">~</span>
+                                <input type="date" class="form-input" style="width: auto;" placeholder="종료일">
+                                <select class="form-select" style="width: auto;">
+                                    <option value="">전체 상태</option>
+                                    <option value="published">발행 완료</option>
+                                    <option value="scheduled">예약됨</option>
+                                    <option value="failed">실패</option>
+                                </select>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" style="padding: 10px;">${UI.icons.youtube}</button>
+                                    <button class="btn btn-secondary" style="padding: 10px;">${UI.icons.instagram}</button>
+                                    <button class="btn btn-secondary" style="padding: 10px;">${UI.icons.threads}</button>
+                                    <button class="btn btn-secondary" style="padding: 10px;">${UI.icons.tiktok}</button>
+                                </div>
+                                <input type="text" class="form-input" style="flex: 1; min-width: 200px;" placeholder="검색어 입력">
+                            </div>
+                            
+                            <!-- History List -->
+                            <div id="historyList">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                                            <th style="text-align: left; padding: 12px; font-size: 14px; font-weight: 600; color: #374151;">제목</th>
+                                            <th style="text-align: left; padding: 12px; font-size: 14px; font-weight: 600; color: #374151;">상태</th>
+                                            <th style="text-align: left; padding: 12px; font-size: 14px; font-weight: 600; color: #374151;">유형</th>
+                                            <th style="text-align: left; padding: 12px; font-size: 14px; font-weight: 600; color: #374151;">날짜</th>
+                                            <th style="text-align: left; padding: 12px; font-size: 14px; font-weight: 600; color: #374151;">플랫폼</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; padding: 40px; color: #6b7280;">
+                                                발행 히스토리가 없습니다.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render Platforms Page
+            renderPlatforms: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">SNS 계정 연결</h1>
+                            <p class="page-subtitle">콘텐츠를 발행할 플랫폼 계정을 연결하세요.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="page-content">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
+                            <!-- YouTube -->
+                            <div class="card">
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                                    <div class="platform-icon youtube" style="width: 48px; height: 48px;">${UI.icons.youtube}</div>
+                                    <div>
+                                        <h3 style="font-size: 18px; font-weight: 600;">YouTube</h3>
+                                        <p style="font-size: 14px; color: #6b7280;">동영상, Shorts</p>
+                                    </div>
+                                </div>
+                                ${STATE.platforms.youtube.connected ? `
+                                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                        <p style="font-weight: 500; color: #166534;">✓ 연결됨</p>
+                                        <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">${STATE.platforms.youtube.data?.channelTitle || 'YouTube 채널'}</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary" style="flex: 1;" onclick="APP.disconnectPlatform('youtube')">연결 해제</button>
+                                        <button class="btn btn-primary" style="flex: 1;" onclick="APP.connectYouTube()">다른 계정 추가</button>
+                                    </div>
+                                ` : `
+                                    <button class="btn btn-primary w-full" onclick="APP.connectYouTube()">
+                                        ${UI.icons.youtube}
+                                        YouTube 연결하기
+                                    </button>
+                                `}
+                            </div>
+                            
+                            <!-- Instagram -->
+                            <div class="card">
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                                    <div class="platform-icon instagram" style="width: 48px; height: 48px;">${UI.icons.instagram}</div>
+                                    <div>
+                                        <h3 style="font-size: 18px; font-weight: 600;">Instagram</h3>
+                                        <p style="font-size: 14px; color: #6b7280;">피드, 릴스, 스토리</p>
+                                    </div>
+                                </div>
+                                ${STATE.platforms.instagram.connected ? `
+                                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                        <p style="font-weight: 500; color: #166534;">✓ 연결됨</p>
+                                        <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">@${STATE.platforms.instagram.data?.username || 'username'}</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary" style="flex: 1;" onclick="APP.disconnectPlatform('instagram')">연결 해제</button>
+                                        <button class="btn btn-primary" style="flex: 1;" onclick="APP.connectInstagram()">다른 계정 추가</button>
+                                    </div>
+                                ` : `
+                                    <button class="btn btn-primary w-full" onclick="APP.connectInstagram()" disabled style="opacity: 0.5; cursor: not-allowed;">
+                                        ${UI.icons.instagram}
+                                        Instagram 연결하기 (준비중)
+                                    </button>
+                                `}
+                            </div>
+                            
+                            <!-- Threads -->
+                            <div class="card">
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                                    <div class="platform-icon threads" style="width: 48px; height: 48px;">${UI.icons.threads}</div>
+                                    <div>
+                                        <h3 style="font-size: 18px; font-weight: 600;">Threads</h3>
+                                        <p style="font-size: 14px; color: #6b7280;">텍스트, 미디어</p>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary w-full" disabled style="opacity: 0.5; cursor: not-allowed;">
+                                    ${UI.icons.threads}
+                                    Threads 연결하기 (준비중)
+                                </button>
+                            </div>
+                            
+                            <!-- TikTok -->
+                            <div class="card">
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                                    <div class="platform-icon tiktok" style="width: 48px; height: 48px;">${UI.icons.tiktok}</div>
+                                    <div>
+                                        <h3 style="font-size: 18px; font-weight: 600;">TikTok</h3>
+                                        <p style="font-size: 14px; color: #6b7280;">동영상</p>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary w-full" disabled style="opacity: 0.5; cursor: not-allowed;">
+                                    ${UI.icons.tiktok}
+                                    TikTok 연결하기 (준비중)
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 32px; padding: 20px; background: #f9fafb; border-radius: 8px;">
+                            <h4 style="font-weight: 600; margin-bottom: 8px;">팀 공유 계정</h4>
+                            <p style="font-size: 14px; color: #6b7280;">팀 공유용 계정을 연결하면 같은 계정을 여러 사람이 사용할 수 있습니다.</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render Subscription Page (Placeholder)
+            renderSubscription: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">구독 관리</h1>
+                        </div>
+                    </div>
+                    <div class="page-content">
+                        <div class="card" style="text-align: center; padding: 60px;">
+                            <p style="color: #6b7280;">현재 무료로 이용 중입니다.</p>
+                            <p style="color: #9ca3af; font-size: 14px; margin-top: 8px;">유료 플랜은 추후 제공 예정입니다.</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render Users Page (Placeholder)
+            renderUsers: () => {
+                return `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">회원 관리</h1>
+                        </div>
+                    </div>
+                    <div class="page-content">
+                        <div class="card" style="text-align: center; padding: 60px;">
+                            <p style="color: #6b7280;">회원 관리 기능은 관리자 메뉴입니다.</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Render Login Page
+            renderLogin: () => {
+                return `
+                    <div class="login-page">
+                        <div class="login-card">
+                            <div class="login-logo">SNS Posting</div>
+                            <p class="login-subtitle">SNS 자동 발행 관리 시스템</p>
+                            
+                            <button class="google-login-btn" onclick="AUTH.signInWithGoogle()">
+                                <svg width="18" height="18" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                </svg>
+                                Google로 로그인
+                            </button>
+                            
+                            <p style="margin-top: 24px; font-size: 12px; color: #9ca3af;">
+                                로그인하면 서비스 이용약관에 동의하는 것입니다.
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // ============================================
+        // APP CONTROLLER
+        // ============================================
+        const APP = {
+            init: () => {
+                initFirebase();
+                AUTH.init();
+            },
+
+            loadUserData: async () => {
+                if (!STATE.user) return;
+                
+                try {
+                    // Load platforms
+                    const platforms = await DB.getPlatforms(STATE.user.uid);
+                    STATE.platforms = { ...STATE.platforms, ...platforms };
+                    
+                    // Calculate stats
+                    STATE.stats.connectedPlatforms = Object.values(STATE.platforms).filter(p => p.connected).length;
+                    STATE.stats.monthlyPosts = await DB.getMonthlyStats(STATE.user.uid);
+                    
+                    // Load draft
+                    const draft = await DB.getDraft(STATE.user.uid);
+                    if (draft) {
+                        STATE.draft = { ...STATE.draft, ...draft };
+                    }
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                }
+            },
+
+            render: () => {
+                const app = document.getElementById('app');
+                
+                if (!STATE.isAuthenticated) {
+                    app.innerHTML = UI.renderLogin();
+                    return;
+                }
+
+                const pageContent = APP.getPageContent();
+                
+                app.innerHTML = `
+                    ${UI.renderSidebar()}
+                    <main class="main-content">
+                        ${pageContent}
+                    </main>
+                `;
+
+                // Initialize calendar if on calendar page
+                if (STATE.currentPage === 'calendar') {
+                    APP.initCalendar();
+                }
+            },
+
+            renderLogin: () => {
+                document.getElementById('app').innerHTML = UI.renderLogin();
+            },
+
+            getPageContent: () => {
+                switch (STATE.currentPage) {
+                    case 'dashboard': return UI.renderDashboard();
+                    case 'publish': return UI.renderPublish();
+                    case 'csv': return UI.renderCsvUpload();
+                    case 'calendar': return UI.renderCalendar();
+                    case 'history': return UI.renderHistory();
+                    case 'platforms': return UI.renderPlatforms();
+                    case 'subscription': return UI.renderSubscription();
+                    case 'users': return UI.renderUsers();
+                    default: return UI.renderDashboard();
+                }
+            },
+
+            navigateTo: (page) => {
+                STATE.currentPage = page;
+                window.location.hash = page;
+                APP.render();
+            },
+
+            // Content Type Selection
+            selectContentType: (type) => {
+                STATE.draft.type = type;
+                APP.render();
+            },
+
+            // File Handling
+            handleFileSelect: (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file size
+                if (file.size > CONFIG.MAX_FILE_SIZE) {
+                    Toast.error('파일 크기가 너무 큽니다. (최대 2GB)');
+                    return;
+                }
+
+                // Validate file type
+                const validTypes = STATE.draft.type === 'video' 
+                    ? CONFIG.SUPPORTED_VIDEO_TYPES 
+                    : CONFIG.SUPPORTED_IMAGE_TYPES;
+                
+                if (!validTypes.includes(file.type)) {
+                    Toast.error('지원하지 않는 파일 형식입니다.');
+                    return;
+                }
+
+                STATE.draft.media = {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    file: file
+                };
+
+                APP.render();
+                Toast.success('파일이 선택되었습니다.');
+            },
+
+            // Platform Toggle
+            togglePlatform: (platform, enabled) => {
+                STATE.draft.platforms[platform] = enabled;
+            },
+
+            // Save Draft
+            saveDraft: async () => {
+                if (!STATE.user) return;
+                
+                try {
+                    await DB.saveDraft(STATE.user.uid, STATE.draft);
+                    Toast.success('임시 저장되었습니다.');
+                } catch (error) {
+                    Toast.error('저장 실패: ' + error.message);
+                }
+            },
+
+            // Publish Now
+            publishNow: async () => {
+                if (!APP.validatePublishForm()) return;
+                
+                try {
+                    const postId = await DB.createPost(STATE.user.uid, {
+                        ...STATE.draft,
+                        status: 'publishing',
+                        scheduledAt: null
+                    });
+                    
+                    Toast.success('발행이 시작되었습니다.');
+                    APP.navigateTo('history');
+                } catch (error) {
+                    Toast.error('발행 실패: ' + error.message);
+                }
+            },
+
+            // Schedule Publish
+            schedulePublish: () => {
+                if (!APP.validatePublishForm()) return;
+                
+                // Show date picker modal (simplified for now)
+                const scheduledAt = prompt('예약 날짜와 시간을 입력하세요 (YYYY-MM-DD HH:MM):');
+                if (!scheduledAt) return;
+                
+                const date = new Date(scheduledAt);
+                if (isNaN(date.getTime())) {
+                    Toast.error('올바른 날짜 형식이 아닙니다.');
+                    return;
+                }
+                
+                STATE.draft.scheduledAt = date;
+                APP.saveDraft();
+                Toast.success('예약 발행이 저장되었습니다.');
+            },
+
+            // Validate Form
+            validatePublishForm: () => {
+                if (!STATE.draft.title.trim()) {
+                    Toast.error('제목을 입력해주세요.');
+                    return false;
+                }
+                if (!STATE.draft.description.trim()) {
+                    Toast.error('설명을 입력해주세요.');
+                    return false;
+                }
+                if (STATE.draft.type !== 'text' && !STATE.draft.media) {
+                    Toast.error('파일을 선택해주세요.');
+                    return false;
+                }
+                const selectedPlatforms = Object.values(STATE.draft.platforms).filter(Boolean);
+                if (selectedPlatforms.length === 0) {
+                    Toast.error('최소 하나의 플랫폼을 선택해주세요.');
+                    return false;
+                }
+                return true;
+            },
+
+            // Pinned Comment Modal
+            openPinnedCommentModal: () => {
+                // Simplified - would show modal with history
+                const comment = prompt('고정댓글을 입력하세요:');
+                if (comment) {
+                    STATE.draft.pinnedComment = comment;
+                    document.getElementById('pinnedComment').value = comment;
+                }
+            },
+
+            // CSV Upload
+            handleCsvSelect: (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                Papa.parse(file, {
+                    header: true,
+                    complete: (results) => {
+                        console.log('CSV parsed:', results.data);
+                        Toast.success(`${results.data.length}개의 항목이 업로드되었습니다.`);
+                    },
+                    error: (error) => {
+                        Toast.error('CSV 파싱 오류: ' + error.message);
+                    }
+                });
+            },
+
+            downloadCsvTemplate: () => {
+                const csv = 'title,description,type,platform,date,hashtags,media\n' +
+                           '예시 제목,예시 설명,VIDEO,YOUTUBE,2024-04-07 15:00,#예시,https://drive.google.com/...';
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'sns-posting-template.csv';
+                link.click();
+                
+                Toast.success('템플릿이 다운로드되었습니다.');
+            },
+
+            // Calendar
+            initCalendar: () => {
+                const calendarEl = document.getElementById('calendar');
+                if (!calendarEl) return;
+
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                    locale: 'ko',
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek'
+                    },
+                    events: [
+                        // Sample events - would be loaded from DB
+                    ]
+                });
+
+                calendar.render();
+            },
+
+            // History
+            refreshHistory: () => {
+                Toast.success('히스토리를 새로고침했습니다.');
+            },
+
+            // Platform Connections
+            connectYouTube: async () => {
+                try {
+                    // Re-authenticate with YouTube scopes
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.addScope('https://www.googleapis.com/auth/youtube.upload');
+                    provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
+                    
+                    const result = await firebase.auth().currentUser.linkWithPopup(provider);
+                    
+                    // Save platform info
+                    await DB.savePlatform(STATE.user.uid, 'youtube', {
+                        connected: true,
+                        channelTitle: result.user.displayName,
+                        connectedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    STATE.platforms.youtube = {
+                        connected: true,
+                        data: { channelTitle: result.user.displayName }
+                    };
+                    
+                    Toast.success('YouTube가 연결되었습니다.');
+                    APP.render();
+                } catch (error) {
+                    Toast.error('연결 실패: ' + error.message);
+                }
+            },
+
+            connectInstagram: () => {
+                Toast.info('Instagram 연동은 준비 중입니다.');
+            },
+
+            disconnectPlatform: async (platform) => {
+                if (!confirm('정말 연결을 해제하시겠습니까?')) return;
+                
+                try {
+                    await DB.savePlatform(STATE.user.uid, platform, {
+                        connected: false,
+                        disconnectedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    STATE.platforms[platform] = { connected: false, data: null };
+                    Toast.success('연결이 해제되었습니다.');
+                    APP.render();
+                } catch (error) {
+                    Toast.error('해제 실패: ' + error.message);
+                }
+            }
+        };
+
+        // ============================================
+        // ROUTING
+        // ============================================
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.replace('#', '') || 'dashboard';
+            STATE.currentPage = hash;
+            APP.render();
+        });
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        document.addEventListener('DOMContentLoaded', APP.init);
+    </script>
+</body>
+</html>
